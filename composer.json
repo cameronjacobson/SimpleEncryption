@@ -1,0 +1,12 @@
+{
+    "name": "SimpleEncryption",
+    "require": {
+		"aws/aws-sdk-php":"2.8.*"
+    },
+    "autoload":{
+        "psr-0": {
+            "SimpleEncryption":"src/"
+        }
+    }
+}
+
