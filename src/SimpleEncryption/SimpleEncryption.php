@@ -11,54 +11,69 @@ class SimpleEncryption
 		$this->privatekey = $this->getPrivateKey($params['key']);
 		$this->publickey = $this->getPublicKey($params['key']);
 
-		if(!empty($params['encrypt']) && is_callable($params['encrypt'])){
-			$this->encrypt = $params['encrypt'];
+		if(!empty($params['beforeencrypt']) && is_callable($params['beforeencrypt'])){
+			$this->beforeencrypt = $params['beforeencrypt'];
 		}
 		else{
-			$this->encrypt = function($x){return $x;};
+			$this->beforeencrypt = function($x){return $x;};
 		}
 
-		if(!empty($params['decrypt']) && is_callable($params['decrypt'])){
-			$this->decrypt = $params['decrypt'];
+		if(!empty($params['afterencrypt']) && is_callable($params['afterencrypt'])){
+			$this->afterencrypt = $params['afterencrypt'];
 		}
 		else{
-			$this->decrypt = function($x){return $x;};
+			$this->afterencrypt = function($x){return $x;};
+		}
+
+		if(!empty($params['beforedecrypt']) && is_callable($params['beforedecrypt'])){
+			$this->beforedecrypt = $params['beforedecrypt'];
+		}
+		else{
+			$this->beforedecrypt = function($x){return $x;};
+		}
+
+		if(!empty($params['afterdecrypt']) && is_callable($params['afterdecrypt'])){
+			$this->afterdecrypt = $params['afterdecrypt'];
+		}
+		else{
+			$this->afterdecrypt = function($x){return $x;};
 		}
 	}
 
-	public function encryptString($string,$private = false){
+	public function encrypt($string,$private = false){
+		$string = $this->beforeencrypt->__invoke($string);
 		if($private){
 			openssl_private_encrypt($string,$encrypted,$this->privatekey,$this->padding);
 		}
 		else{
 			openssl_public_encrypt($string,$encrypted,$this->publickey,$this->padding);
 		}
-		return $this->encrypt->__invoke($encrypted);
+		return $this->afterencrypt->__invoke($encrypted);
 	}
 
-	public function decryptString($string,$public=false){
-		$string = $this->decrypt->__invoke($string);
+	public function decrypt($string,$public=false){
+		$string = $this->beforedecrypt->__invoke($string);
 		if($public){
 			openssl_public_decrypt($string,$decrypted,$this->publickey,$this->padding);
 		}
 		else{
 			openssl_private_decrypt($string,$decrypted,$this->privatekey,$this->padding);
 		}
-		return $decrypted;
+		return $this->afterdecrypt->__invoke($decrypted);
 	}
 
 	public function encryptFile($filename,$private = false){
 		if(!file_exists($filename)){
 			throw new \Exception('file '.$filename.' does not exist');
 		}
-		return $this->encryptString(file_get_contents($filename),$private);
+		return $this->encrypt(file_get_contents($filename),$private);
 	}
 
 	public function decryptFile($filename,$public=false){
 		if(!file_exists($filename)){
 			throw new \Exception('file '.$filename.' does not exist');
 		}
-		return $this->decryptString(file_get_contents($filename),$public);
+		return $this->decrypt(file_get_contents($filename),$public);
 	}
 
 	public static function createKeyPair($filename){
