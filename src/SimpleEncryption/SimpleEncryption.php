@@ -10,6 +10,20 @@ class SimpleEncryption
 		$this->padding = $params['padding'];
 		$this->privatekey = $this->getPrivateKey($params['key']);
 		$this->publickey = $this->getPublicKey($params['key']);
+
+		if(!empty($params['encrypt']) && is_callable($params['encrypt'])){
+			$this->encrypt = $params['encrypt'];
+		}
+		else{
+			$this->encrypt = function($x){return $x;};
+		}
+
+		if(!empty($params['decrypt']) && is_callable($params['decrypt'])){
+			$this->decrypt = $params['decrypt'];
+		}
+		else{
+			$this->decrypt = function($x){return $x;};
+		}
 	}
 
 	public function encryptString($string,$private = false){
@@ -19,10 +33,11 @@ class SimpleEncryption
 		else{
 			openssl_public_encrypt($string,$encrypted,$this->publickey,$this->padding);
 		}
-		return $encrypted;
+		return $this->encrypt->__invoke($encrypted);
 	}
 
 	public function decryptString($string,$public=false){
+		$string = $this->decrypt->__invoke($string);
 		if($public){
 			openssl_public_decrypt($string,$decrypted,$this->publickey,$this->padding);
 		}
